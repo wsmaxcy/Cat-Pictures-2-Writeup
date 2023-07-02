@@ -15,16 +15,21 @@ I started the box, then ran the Nmap command `nmap -sV -sC -p- #BOXIP -o nmap` t
  - 8080 - Python http server..... *ok we get it*
 
 Cool, now we have some stuff to explore. Lets check out the web pages first.
+
 ![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/1.png?text=First+Pic)
+
 On port 80 we have a Lychee version 3.1.1 photo album full of cat pictures. Oh! like the name of the room. Probably a good idea to come to this one first.
 
 ![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/2.png?text=First+Pic)
+
 On port 1337 we have OliveTin, which on it's [GitHub page](https://github.com/OliveTin/OliveTin) says to be a "safe and simple access to predefined shell commands from a web interface". Great! We know that there is a way to run code on the machine. I see it has run a script, ability to ping the host, and run an Ansible Playbook. I'll keep this in mind visiting the other assets.
 
 ![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/3.png?text=First+Pic)
+
 On port 3000 we have a "Gitea" web application. On [their website](https://about.gitea.com/) it says that it is a "lightweight DevOps platform", so maybe this is where the scripts and runbooks are hosted?
 
 ![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/4.png?text=First+Pic)
+
 On port 8080 there is the Nginx default webpage. This seems weird... might have some subdirectories that can be found.
 
 At this point I ran `gobuster dir -u http://#TARGETIP:TARGETPORT -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -t 75` on every web application and got nothing interesting back. I also checked for vulnerabilites in each of the web applications too. Nothing interesting yet, so I decided to go check out the cat pics hosted on port 80.
@@ -32,14 +37,17 @@ At this point I ran `gobuster dir -u http://#TARGETIP:TARGETPORT -w /usr/share/w
 After looking for more clues with the pics, I decided to download them all and see if there was any exif data located on the files themselves. I ran `exiftool *.jpg` in the file of pics and got back something interesting...
 
 ![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/5.png?text=First+Pic)
+
 Looks like a port number and text file. I visited the url and was greeted with this...
 
 ![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/6.png?text=First+Pic)
+
 Awesome! Access to something! 
 
 when I login and see what's visible on the website clicked the user's repository and found this...
 
 ![App Screenshot](https://willmaxcy.com/assets/imgs/catpics2/7.png?text=First+Pic) 
+
 flag1.txt found! 1/3
 
 From here, I checked out the `playbook.yaml` file and saw this...
