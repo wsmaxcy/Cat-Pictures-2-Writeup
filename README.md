@@ -1,5 +1,5 @@
 
-# Cat Pictures 2
+# Cat Pictures 2 Writeup
 
 Quick runthrough of a fun CTF from TryHackMe called [Cat Pictures 2](https://tryhackme.com/room/catpictures2).
 
